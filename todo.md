@@ -17,9 +17,9 @@
 - [x] Create services/cache_service.py with in-memory caching
 
 ## Phase 3: Authentication
-- [ ] Create utils/decorators.py with @login_required
-- [ ] Create routes/auth.py with login/logout routes
-- [ ] Configure Flask session security in app.py
+- [x] Create utils/decorators.py with @login_required
+- [x] Create routes/auth.py with login/logout routes
+- [x] Configure Flask session security in app.py
 
 ## Phase 4: Public Routes
 - [ ] Create routes/public.py with dashboard routes
