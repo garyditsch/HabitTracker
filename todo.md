@@ -11,10 +11,10 @@
 - [x] Create models/database.py with connection logic
 
 ## Phase 2: Service Layer
-- [ ] Create services/habit_service.py with CRUD operations
-- [ ] Create services/log_service.py with log operations
-- [ ] Create services/dashboard_service.py with data aggregation
-- [ ] Create services/cache_service.py with in-memory caching
+- [x] Create services/habit_service.py with CRUD operations
+- [x] Create services/log_service.py with log operations
+- [x] Create services/dashboard_service.py with data aggregation
+- [x] Create services/cache_service.py with in-memory caching
 
 ## Phase 3: Authentication
 - [ ] Create utils/decorators.py with @login_required
