@@ -7,8 +7,8 @@
 - [x] Create config.py for environment variables
 
 ## Phase 1: Database Layer
-- [ ] Create models/schema.sql with database schema
-- [ ] Create models/database.py with connection logic
+- [x] Create models/schema.sql with database schema
+- [x] Create models/database.py with connection logic
 
 ## Phase 2: Service Layer
 - [ ] Create services/habit_service.py with CRUD operations
