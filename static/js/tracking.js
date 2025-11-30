@@ -175,9 +175,13 @@ function createHabitElement(habit) {
     if (habit.status) {
         button.className += ' bg-green-600 hover:bg-green-700 text-white';
         button.textContent = '✓ Done';
+        button.setAttribute('aria-label', `Mark ${habit.name} as not done`);
+        button.setAttribute('aria-pressed', 'true');
     } else {
         button.className += ' bg-gray-200 hover:bg-gray-300 text-gray-700';
         button.textContent = 'Not Done';
+        button.setAttribute('aria-label', `Mark ${habit.name} as done`);
+        button.setAttribute('aria-pressed', 'false');
     }
 
     button.addEventListener('click', () => toggleHabit(habit.id));
@@ -207,9 +211,13 @@ function toggleHabit(habitId) {
     if (habit.status) {
         button.className = 'px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105 min-w-[120px] bg-green-600 hover:bg-green-700 text-white';
         button.textContent = '✓ Done';
+        button.setAttribute('aria-label', `Mark ${habit.name} as not done`);
+        button.setAttribute('aria-pressed', 'true');
     } else {
         button.className = 'px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105 min-w-[120px] bg-gray-200 hover:bg-gray-300 text-gray-700';
         button.textContent = 'Not Done';
+        button.setAttribute('aria-label', `Mark ${habit.name} as done`);
+        button.setAttribute('aria-pressed', 'false');
     }
 }
 

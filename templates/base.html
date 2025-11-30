@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Personal habit tracking dashboard with public visualization and private tracking">
+    <meta name="author" content="Health Tracker">
+    <meta name="theme-color" content="#16a34a">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}Health Tracker{% endblock %}">
+    <meta property="og:description" content="Personal habit tracking dashboard with public visualization and private tracking">
+    <meta property="og:site_name" content="Health Tracker">
+
+    <title>{% block title %}Health Tracker{% endblock %}</title>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js (optional, only loaded when needed) -->
+    {% block chart_js %}{% endblock %}
+
+    <!-- Custom CSS -->
+    <style>
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Smooth transitions */
+        * {
+            transition-property: background-color, border-color, color, fill, stroke;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+
+        /* Skip navigation link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #16a34a;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            z-index: 100;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* Enhanced focus styles */
+        *:focus-visible {
+            outline: 2px solid #16a34a;
+            outline-offset: 2px;
+        }
+
+        /* Remove default outline but keep for keyboard navigation */
+        *:focus:not(:focus-visible) {
+            outline: none;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Skip Navigation Link -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <a href="/" class="text-2xl font-bold text-gray-900 hover:text-gray-700">
+                        {% block header_title %}Health Tracker{% endblock %}
+                    </a>
+                    {% block header_subtitle %}{% endblock %}
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex gap-3 items-center">
+                    {% block navigation %}
+                    <a href="/" class="text-gray-600 hover:text-gray-900">Dashboard</a>
+                    {% if session.get('authenticated') %}
+                        <a href="/track" class="text-gray-600 hover:text-gray-900">Track</a>
+                        <a href="/settings" class="text-gray-600 hover:text-gray-900">Settings</a>
+                        <a href="/logout" class="text-red-600 hover:text-red-700">Logout</a>
+                    {% else %}
+                        <a href="/login" class="text-gray-600 hover:text-gray-900">Login</a>
+                    {% endif %}
+                    {% endblock %}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                {% for category, message in messages %}
+                    <div class="rounded-lg p-4 mb-4 {% if category == 'error' %}bg-red-100 text-red-800{% elif category == 'success' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}" role="alert">
+                        <p class="font-medium">{{ message }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1" role="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-gray-600 text-sm">
+                <p>&copy; 2024 Health Tracker. Built with Flask, TailwindCSS, and Chart.js.</p>
+                {% block footer_extra %}{% endblock %}
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

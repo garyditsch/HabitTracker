@@ -80,6 +80,8 @@ function createHabitCard(habit) {
     const canvas = document.createElement('canvas');
     canvas.id = `chart-${habit.id}`;
     canvas.style.maxHeight = '200px';
+    canvas.setAttribute('role', 'img');
+    canvas.setAttribute('aria-label', `30-day completion chart for ${habit.name}. Current streak: ${habit.current_streak} days. Completion rate: ${habit.completion_rate}%`);
     card.appendChild(canvas);
 
     // Render chart after a brief delay to ensure DOM is ready

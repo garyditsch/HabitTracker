@@ -88,6 +88,8 @@ function createHabitElement(habit) {
     div.className = 'bg-gray-50 rounded-lg p-4 flex items-center gap-3 cursor-move hover:bg-gray-100 transition';
     div.draggable = true;
     div.dataset.habitId = habit.id;
+    div.setAttribute('role', 'listitem');
+    div.setAttribute('aria-grabbed', 'false');
 
     // Drag handle
     const dragHandle = document.createElement('span');
@@ -125,6 +127,7 @@ function createHabitElement(habit) {
     const editBtn = document.createElement('button');
     editBtn.className = 'px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded transition';
     editBtn.textContent = 'Edit';
+    editBtn.setAttribute('aria-label', `Edit habit: ${habit.name}`);
     editBtn.addEventListener('click', () => editHabit(habit));
     div.appendChild(editBtn);
 
@@ -132,6 +135,7 @@ function createHabitElement(habit) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded transition';
     deleteBtn.textContent = 'Delete';
+    deleteBtn.setAttribute('aria-label', `Delete habit: ${habit.name}`);
     deleteBtn.addEventListener('click', () => deleteHabit(habit));
     div.appendChild(deleteBtn);
 
@@ -258,6 +262,7 @@ async function deleteHabit(habit) {
 function handleDragStart(e) {
     draggedElement = e.currentTarget;
     e.currentTarget.style.opacity = '0.5';
+    e.currentTarget.setAttribute('aria-grabbed', 'true');
     e.dataTransfer.effectAllowed = 'move';
 }
 
@@ -299,6 +304,7 @@ function handleDrop(e) {
 
 function handleDragEnd(e) {
     e.currentTarget.style.opacity = '1';
+    e.currentTarget.setAttribute('aria-grabbed', 'false');
 }
 
 /**

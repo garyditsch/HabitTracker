@@ -124,13 +124,20 @@ def update_habit(habit_id, **kwargs):
     db = get_db()
 
     # Build dynamic UPDATE query based on provided kwargs
-    allowed_fields = ['name', 'is_active', 'is_public', 'order_index']
+    # Using a whitelist approach for security
+    allowed_fields = {
+        'name': 'name = ?',
+        'is_active': 'is_active = ?',
+        'is_public': 'is_public = ?',
+        'order_index': 'order_index = ?'
+    }
+
     updates = []
     values = []
 
     for field, value in kwargs.items():
         if field in allowed_fields:
-            updates.append(f"{field} = ?")
+            updates.append(allowed_fields[field])
             # Convert boolean to int for SQLite
             if field in ['is_active', 'is_public'] and isinstance(value, bool):
                 values.append(1 if value else 0)
@@ -141,7 +148,8 @@ def update_habit(habit_id, **kwargs):
         return 0
 
     values.append(habit_id)
-    query = f"UPDATE habits SET {', '.join(updates)} WHERE id = ?"
+    # Join pre-validated update clauses (no f-string interpolation)
+    query = "UPDATE habits SET " + ", ".join(updates) + " WHERE id = ?"
 
     return db.execute_update(query, tuple(values))
 
