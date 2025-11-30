@@ -22,9 +22,9 @@
 - [x] Configure Flask session security in app.py
 
 ## Phase 4: Public Routes
-- [ ] Create routes/public.py with dashboard routes
-- [ ] Create templates/public/dashboard.html
-- [ ] Create static/js/dashboard.js with Chart.js
+- [x] Create routes/public.py with dashboard routes
+- [x] Create templates/public/dashboard.html
+- [x] Create static/js/dashboard.js with Chart.js
 
 ## Phase 5: Protected Routes
 - [ ] Create routes/admin.py with protected routes
