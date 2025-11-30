@@ -27,11 +27,11 @@
 - [x] Create static/js/dashboard.js with Chart.js
 
 ## Phase 5: Protected Routes
-- [ ] Create routes/admin.py with protected routes
-- [ ] Create templates/admin/track.html
-- [ ] Create templates/admin/settings.html with drag-drop
-- [ ] Create static/js/tracking.js
-- [ ] Create static/js/settings.js with drag-drop functionality
+- [x] Create routes/admin.py with protected routes
+- [x] Create templates/admin/track.html
+- [x] Create templates/admin/settings.html with drag-drop
+- [x] Create static/js/tracking.js
+- [x] Create static/js/settings.js with drag-drop functionality
 
 ## Phase 6: Frontend Polish
 - [ ] Create templates/base.html with TailwindCSS

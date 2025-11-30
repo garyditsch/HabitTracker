@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Health Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900">Settings</h1>
+                <div class="flex gap-3">
+                    <a href="/track" class="text-gray-600 hover:text-gray-900">Track</a>
+                    <a href="/" class="text-gray-600 hover:text-gray-900">Dashboard</a>
+                    <a href="/logout" class="text-red-600 hover:text-red-700">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Add Habit Form -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Add New Habit</h2>
+
+            <form id="add-habit-form" class="flex gap-3 flex-wrap">
+                <input
+                    type="text"
+                    id="habit-name"
+                    placeholder="Habit name (e.g., Morning Exercise)"
+                    class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                    maxlength="100"
+                >
+
+                <label class="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg cursor-pointer">
+                    <input type="checkbox" id="habit-is-public" checked class="rounded text-green-600 focus:ring-green-500">
+                    <span class="text-sm text-gray-700">Public</span>
+                </label>
+
+                <button
+                    type="submit"
+                    class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
+                >
+                    Add Habit
+                </button>
+            </form>
+        </div>
+
+        <!-- Habits List -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900">Manage Habits</h2>
+                <p class="text-sm text-gray-600">Drag to reorder</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <p class="mt-2 text-gray-600">Loading habits...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden text-center py-8">
+                <p class="text-gray-600">No habits yet. Create one above!</p>
+            </div>
+
+            <!-- Habits List -->
+            <div id="habits-list" class="hidden space-y-2">
+                <!-- Habit items will be inserted here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="status-message" class="hidden mt-4 p-4 rounded-lg text-center"></div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+</body>
+</html>
