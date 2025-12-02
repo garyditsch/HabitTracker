@@ -24,7 +24,9 @@ from .log_service import (
 from .dashboard_service import (
     get_public_dashboard_data,
     get_admin_tracking_data,
-    get_habit_history_chart_data
+    get_habit_history_chart_data,
+    get_yearly_heatmap_data,
+    get_archived_habits_data
 )
 
 from .cache_service import (
@@ -58,6 +60,8 @@ __all__ = [
     'get_public_dashboard_data',
     'get_admin_tracking_data',
     'get_habit_history_chart_data',
+    'get_yearly_heatmap_data',
+    'get_archived_habits_data',
     # Cache service
     'cache',
     'get_cached',

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Health Tracker{% endblock %}
+{% block title %}Dashboard - Habit Tracker{% endblock %}
 
 {% block chart_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -28,6 +28,89 @@
     <!-- Habits Grid -->
     <div id="habits-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Habit cards will be inserted here by JavaScript -->
+    </div>
+
+    <!-- Yearly Heatmap Section -->
+    <div id="heatmap-section" class="hidden mt-12">
+        <div class="border-t border-gray-300 pt-8">
+            <!-- Section Header with Year Navigation -->
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Yearly Progress</h2>
+                <div class="flex items-center gap-4">
+                    <button id="prev-year" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" aria-label="Previous year">
+                        <span aria-hidden="true">←</span> Previous
+                    </button>
+                    <span id="current-year" class="text-xl font-semibold text-gray-900" role="status">2025</span>
+                    <button id="next-year" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" aria-label="Next year">
+                        Next <span aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Overall Statistics -->
+            <div id="heatmap-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="text-sm text-gray-600 mb-1">Days Tracked</div>
+                    <div id="stat-days" class="text-2xl font-bold text-gray-900">0</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="text-sm text-gray-600 mb-1">Average Completion</div>
+                    <div id="stat-average" class="text-2xl font-bold text-gray-900">0%</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="text-sm text-gray-600 mb-1">Best Day</div>
+                    <div id="stat-best" class="text-2xl font-bold text-green-600">--</div>
+                    <div id="stat-best-date" class="text-xs text-gray-500 mt-1">--</div>
+                </div>
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="text-sm text-gray-600 mb-1">Worst Day</div>
+                    <div id="stat-worst" class="text-2xl font-bold text-gray-600">--</div>
+                    <div id="stat-worst-date" class="text-xs text-gray-500 mt-1">--</div>
+                </div>
+            </div>
+
+            <!-- Color Legend (Colorblind-Friendly) -->
+            <div class="flex items-center justify-center gap-2 mb-6 text-sm">
+                <span class="text-gray-600">Less</span>
+                <div class="flex gap-1">
+                    <div class="w-4 h-4 rounded border border-gray-300 bg-gray-200" title="0% completion"></div>
+                    <div class="w-4 h-4 rounded border border-gray-300 bg-blue-200" title="1-25% completion"></div>
+                    <div class="w-4 h-4 rounded border border-gray-300 bg-blue-400" title="26-50% completion"></div>
+                    <div class="w-4 h-4 rounded border border-gray-300 bg-blue-600" title="51-75% completion"></div>
+                    <div class="w-4 h-4 rounded border border-gray-300 bg-orange-500" title="76-100% completion"></div>
+                </div>
+                <span class="text-gray-600">More</span>
+            </div>
+
+            <!-- Calendar Grid (12 months) -->
+            <div id="heatmap-calendar" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Month grids will be inserted here by JavaScript -->
+            </div>
+
+            <!-- Loading State -->
+            <div id="heatmap-loading" class="hidden text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" aria-hidden="true"></div>
+                <p class="mt-4 text-gray-600">Loading yearly data...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archived Habits Section -->
+    <div id="archived-section" class="hidden mt-12">
+        <div class="border-t border-gray-300 pt-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Archived Habits</h2>
+            <p class="text-gray-600 mb-6">These habits are no longer active, but their historical data is preserved.</p>
+
+            <!-- Archived Habits Grid -->
+            <div id="archived-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Archived habit cards will be inserted here by JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="archived-empty" class="hidden text-center py-8 text-gray-500">
+                <p>No archived habits yet.</p>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

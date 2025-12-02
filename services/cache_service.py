@@ -163,3 +163,10 @@ def invalidate_dashboard_cache():
     """
     cache.invalidate('public_dashboard_data')
     cache.invalidate('public_dashboard_json')
+    cache.invalidate('archived_habits_data')
+
+    # Invalidate all heatmap cache entries (all years)
+    # Keys look like: 'heatmap_data_2025', 'heatmap_data_current', etc.
+    keys_to_remove = [key for key in cache._cache.keys() if key.startswith('heatmap_data_')]
+    for key in keys_to_remove:
+        cache.invalidate(key)
