@@ -62,4 +62,4 @@ htmlcov/
 
 # Deployment
 *.pid
-Deployment.md
+DEPLOYMENT.md
