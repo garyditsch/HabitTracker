@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from calendar import monthrange
 from models import get_db
 from services.habit_service import get_active_habits
-from services.log_service import get_habit_streak, get_completion_stats
+from services.log_service import get_habit_streak, get_completion_stats, get_value_stats
 
 
 def get_public_dashboard_data(days=30):
@@ -60,7 +60,7 @@ def get_public_dashboard_data(days=30):
 
         # Get logs for this habit in the date range
         logs_query = """
-            SELECT date, status
+            SELECT date, status, value
             FROM logs
             WHERE habit_id = ?
               AND date >= ?
@@ -76,7 +76,8 @@ def get_public_dashboard_data(days=30):
         logs_list = [
             {
                 'date': log['date'],
-                'status': bool(log['status'])
+                'status': bool(log['status']),
+                'value': log['value']
             }
             for log in logs
         ]
@@ -91,12 +92,29 @@ def get_public_dashboard_data(days=30):
             'id': habit_id,
             'name': habit['name'],
             'created_at': habit['created_at'],
+            'tracks_value': bool(habit['tracks_value']) if 'tracks_value' in habit.keys() else False,
+            'value_unit': habit['value_unit'] if 'value_unit' in habit.keys() else None,
+            'value_aggregation_type': habit['value_aggregation_type'] if 'value_aggregation_type' in habit.keys() else 'absolute',
             'current_streak': streak_info['current_streak'],
             'completion_rate': stats['completion_rate'],
             'completed_days': stats['completed_days'],
             'total_days': stats['total_days'],
             'logs': logs_list
         }
+
+        # Add value statistics if the habit tracks values
+        if 'tracks_value' in habit.keys() and habit['tracks_value']:
+            value_stats = get_value_stats(habit_id, days)
+            habit_data['value_stats'] = value_stats
+
+            # Add aggregated statistics for cumulative habits
+            aggregation_type = habit['value_aggregation_type'] if 'value_aggregation_type' in habit.keys() else 'absolute'
+            if aggregation_type == 'cumulative':
+                habit_data['value_aggregations'] = {
+                    'week': get_cumulative_total(habit_id, 7),
+                    'month': get_cumulative_total(habit_id, 30),
+                    'year': get_cumulative_total(habit_id, 365)
+                }
 
         dashboard_data['habits'].append(habit_data)
 
@@ -139,14 +157,20 @@ def get_admin_tracking_data(date):
 
     # Get existing logs for this date
     logs_query = """
-        SELECT habit_id, status
+        SELECT habit_id, status, value
         FROM logs
         WHERE date = ?
     """
     logs = db.execute_query(logs_query, (date_str,))
 
-    # Create a mapping of habit_id to status
-    logs_map = {log['habit_id']: bool(log['status']) for log in logs}
+    # Create a mapping of habit_id to status and value
+    logs_map = {
+        log['habit_id']: {
+            'status': bool(log['status']),
+            'value': log['value']
+        }
+        for log in logs
+    }
 
     tracking_data = {
         'date': date_str,
@@ -156,14 +180,19 @@ def get_admin_tracking_data(date):
     for habit in habits:
         habit_id = habit['id']
         is_logged = habit_id in logs_map
+        log_data = logs_map.get(habit_id, {'status': False, 'value': None})
 
         habit_data = {
             'id': habit_id,
             'name': habit['name'],
             'is_public': bool(habit['is_public']),
             'order_index': habit['order_index'],
+            'tracks_value': bool(habit['tracks_value']) if 'tracks_value' in habit.keys() else False,
+            'value_unit': habit['value_unit'] if 'value_unit' in habit.keys() else None,
+            'value_aggregation_type': habit['value_aggregation_type'] if 'value_aggregation_type' in habit.keys() else 'absolute',
             'is_logged': is_logged,
-            'status': logs_map.get(habit_id, False)
+            'status': log_data['status'],
+            'value': log_data['value']
         }
 
         tracking_data['habits'].append(habit_data)
@@ -194,7 +223,7 @@ def get_habit_history_chart_data(habit_id, days=90):
 
     # Get all logs for this habit in the date range
     query = """
-        SELECT date, status
+        SELECT date, status, value
         FROM logs
         WHERE habit_id = ?
           AND date >= ?
@@ -206,23 +235,27 @@ def get_habit_history_chart_data(habit_id, days=90):
         (habit_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
     )
 
-    # Create a mapping of date to status
-    logs_map = {log['date']: int(log['status']) for log in logs}
+    # Create a mapping of date to status and value
+    logs_map = {log['date']: {'status': int(log['status']), 'value': log['value']} for log in logs}
 
     # Generate all dates in the range
     labels = []
     data = []
     current_date = start_date
 
+    values = []
     while current_date <= end_date:
         date_str = current_date.strftime('%Y-%m-%d')
         labels.append(date_str)
-        data.append(logs_map.get(date_str, 0))
+        log_entry = logs_map.get(date_str, {'status': 0, 'value': None})
+        data.append(log_entry['status'])
+        values.append(log_entry['value'])
         current_date += timedelta(days=1)
 
     return {
         'labels': labels,
         'data': data,
+        'values': values,  # Value data for value-tracking habits
         'dates': labels  # Redundant but useful for reference
     }
 
@@ -471,6 +504,40 @@ def get_yearly_heatmap_data(year=None):
         'months': months_data,
         'overall_stats': overall_stats
     }
+
+
+def get_cumulative_total(habit_id, days):
+    """
+    Calculate the cumulative total of values for a habit over a time period.
+
+    Args:
+        habit_id: The habit ID
+        days: Number of days to sum (7 for week, 30 for month, 365 for year)
+
+    Returns:
+        Float: Total sum of values, or 0 if no values recorded
+    """
+    from datetime import datetime, timedelta
+
+    db = get_db()
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days - 1)
+
+    query = """
+        SELECT COALESCE(SUM(value), 0) as total
+        FROM logs
+        WHERE habit_id = ?
+          AND date >= ?
+          AND date <= ?
+          AND value IS NOT NULL
+    """
+
+    result = db.execute_query(
+        query,
+        (habit_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+    )
+
+    return float(result[0]['total']) if result else 0.0
 
 
 def get_archived_habits_data():

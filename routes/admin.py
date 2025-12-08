@@ -85,7 +85,7 @@ def save_tracking():
         {
             "date": "YYYY-MM-DD",
             "logs": [
-                {"habit_id": 1, "status": true},
+                {"habit_id": 1, "status": true, "value": 10},
                 {"habit_id": 2, "status": false}
             ]
         }
@@ -108,7 +108,17 @@ def save_tracking():
         return jsonify({'error': 'Invalid date format'}), 400
 
     # Convert logs list to dict for save_day_logs
-    habit_statuses = {log['habit_id']: log['status'] for log in logs}
+    habit_statuses = {}
+    for log in logs:
+        habit_id = log['habit_id']
+        # Check if value is provided
+        if 'value' in log and log['value'] is not None:
+            habit_statuses[habit_id] = {
+                'status': log['status'],
+                'value': log['value']
+            }
+        else:
+            habit_statuses[habit_id] = log['status']
 
     # Save logs
     count = save_day_logs(date_str, habit_statuses)
@@ -148,6 +158,8 @@ def get_habits():
             'is_active': bool(h['is_active']),
             'is_public': bool(h['is_public']),
             'order_index': h['order_index'],
+            'tracks_value': bool(h['tracks_value']) if 'tracks_value' in h.keys() else False,
+            'value_unit': h['value_unit'] if 'value_unit' in h.keys() else None,
             'created_at': h['created_at']
         }
         for h in habits
@@ -165,7 +177,9 @@ def create_new_habit():
     Request body:
         {
             "name": "Habit name",
-            "is_public": true
+            "is_public": true,
+            "tracks_value": false,
+            "value_unit": "pushups"
         }
 
     Returns:
@@ -182,9 +196,26 @@ def create_new_habit():
         return jsonify({'error': 'Habit name must be 1-100 characters'}), 400
 
     is_public = data.get('is_public', True)
+    tracks_value = data.get('tracks_value', False)
+    value_unit = data.get('value_unit')
+    value_aggregation_type = data.get('value_aggregation_type', 'absolute')
+
+    # Validate value_unit if provided
+    if value_unit and len(value_unit) > 50:
+        return jsonify({'error': 'Value unit must be 50 characters or less'}), 400
+
+    # Validate value_aggregation_type
+    if value_aggregation_type not in ['absolute', 'cumulative']:
+        return jsonify({'error': 'Value aggregation type must be "absolute" or "cumulative"'}), 400
 
     # Create habit
-    habit_id = create_habit(name, is_public=is_public)
+    habit_id = create_habit(
+        name,
+        is_public=is_public,
+        tracks_value=tracks_value,
+        value_unit=value_unit,
+        value_aggregation_type=value_aggregation_type
+    )
 
     # Invalidate dashboard cache
     invalidate_dashboard_cache()
@@ -206,7 +237,9 @@ def update_existing_habit(habit_id):
         {
             "name": "New name",
             "is_active": true,
-            "is_public": false
+            "is_public": false,
+            "tracks_value": true,
+            "value_unit": "lbs"
         }
 
     Returns:
@@ -236,6 +269,22 @@ def update_existing_habit(habit_id):
 
     if 'is_public' in data:
         updates['is_public'] = bool(data['is_public'])
+
+    if 'tracks_value' in data:
+        updates['tracks_value'] = bool(data['tracks_value'])
+
+    if 'value_unit' in data:
+        value_unit = data['value_unit']
+        # Allow None/null to clear the value_unit
+        if value_unit is not None and len(value_unit) > 50:
+            return jsonify({'error': 'Value unit must be 50 characters or less'}), 400
+        updates['value_unit'] = value_unit
+
+    if 'value_aggregation_type' in data:
+        value_aggregation_type = data['value_aggregation_type']
+        if value_aggregation_type not in ['absolute', 'cumulative']:
+            return jsonify({'error': 'Value aggregation type must be "absolute" or "cumulative"'}), 400
+        updates['value_aggregation_type'] = value_aggregation_type
 
     # Update habit
     update_habit(habit_id, **updates)

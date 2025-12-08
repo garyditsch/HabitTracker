@@ -23,8 +23,8 @@ def get_logs_for_date(date, include_private=True):
 
     if include_private:
         query = """
-            SELECT l.id, l.habit_id, l.date, l.status,
-                   h.name as habit_name, h.is_public, h.order_index
+            SELECT l.id, l.habit_id, l.date, l.status, l.value,
+                   h.name as habit_name, h.is_public, h.order_index, h.tracks_value, h.value_unit
             FROM logs l
             JOIN habits h ON l.habit_id = h.id
             WHERE l.date = ?
@@ -32,8 +32,8 @@ def get_logs_for_date(date, include_private=True):
         """
     else:
         query = """
-            SELECT l.id, l.habit_id, l.date, l.status,
-                   h.name as habit_name, h.is_public, h.order_index
+            SELECT l.id, l.habit_id, l.date, l.status, l.value,
+                   h.name as habit_name, h.is_public, h.order_index, h.tracks_value, h.value_unit
             FROM logs l
             JOIN habits h ON l.habit_id = h.id
             WHERE l.date = ? AND h.is_public = 1
@@ -65,7 +65,7 @@ def get_logs_for_habit(habit_id, start_date=None, end_date=None):
 
     if start_date and end_date:
         query = """
-            SELECT id, habit_id, date, status
+            SELECT id, habit_id, date, status, value
             FROM logs
             WHERE habit_id = ? AND date >= ? AND date <= ?
             ORDER BY date DESC
@@ -73,7 +73,7 @@ def get_logs_for_habit(habit_id, start_date=None, end_date=None):
         return db.execute_query(query, (habit_id, start_date, end_date))
     elif start_date:
         query = """
-            SELECT id, habit_id, date, status
+            SELECT id, habit_id, date, status, value
             FROM logs
             WHERE habit_id = ? AND date >= ?
             ORDER BY date DESC
@@ -81,7 +81,7 @@ def get_logs_for_habit(habit_id, start_date=None, end_date=None):
         return db.execute_query(query, (habit_id, start_date))
     elif end_date:
         query = """
-            SELECT id, habit_id, date, status
+            SELECT id, habit_id, date, status, value
             FROM logs
             WHERE habit_id = ? AND date <= ?
             ORDER BY date DESC
@@ -89,7 +89,7 @@ def get_logs_for_habit(habit_id, start_date=None, end_date=None):
         return db.execute_query(query, (habit_id, end_date))
     else:
         query = """
-            SELECT id, habit_id, date, status
+            SELECT id, habit_id, date, status, value
             FROM logs
             WHERE habit_id = ?
             ORDER BY date DESC
@@ -97,7 +97,7 @@ def get_logs_for_habit(habit_id, start_date=None, end_date=None):
         return db.execute_query(query, (habit_id,))
 
 
-def upsert_log(habit_id, date, status):
+def upsert_log(habit_id, date, status, value=None):
     """
     Insert or update a log entry for a habit on a specific date.
 
@@ -105,6 +105,7 @@ def upsert_log(habit_id, date, status):
         habit_id: The habit ID
         date: Date string in 'YYYY-MM-DD' format or datetime object
         status: Boolean indicating completion (True) or not (False)
+        value: Optional numeric value (e.g., pushup count, weight)
 
     Returns:
         ID of inserted/updated log
@@ -120,13 +121,13 @@ def upsert_log(habit_id, date, status):
 
     # Use INSERT OR REPLACE (upsert)
     query = """
-        INSERT INTO logs (habit_id, date, status)
-        VALUES (?, ?, ?)
+        INSERT INTO logs (habit_id, date, status, value)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(habit_id, date)
-        DO UPDATE SET status = excluded.status
+        DO UPDATE SET status = excluded.status, value = excluded.value
     """
 
-    return db.execute_update(query, (habit_id, date, status_int))
+    return db.execute_update(query, (habit_id, date, status_int, value))
 
 
 def delete_log(habit_id, date):
@@ -168,7 +169,7 @@ def get_habit_streak(habit_id):
 
     # Get all completed logs for this habit, ordered by date descending
     query = """
-        SELECT date, status
+        SELECT date, status, value
         FROM logs
         WHERE habit_id = ? AND status = 1
         ORDER BY date DESC
@@ -223,8 +224,10 @@ def save_day_logs(date, habit_statuses):
 
     Args:
         date: Date string in 'YYYY-MM-DD' format or datetime object
-        habit_statuses: Dictionary mapping habit_id to status boolean
-                       Example: {1: True, 2: False, 3: True}
+        habit_statuses: Dictionary mapping habit_id to status boolean or dict with status and value
+                       Examples:
+                       - Simple: {1: True, 2: False}
+                       - With values: {1: {'status': True, 'value': 10}, 2: {'status': False}}
 
     Returns:
         Number of logs saved
@@ -236,11 +239,81 @@ def save_day_logs(date, habit_statuses):
         date = date.strftime('%Y-%m-%d')
 
     count = 0
-    for habit_id, status in habit_statuses.items():
-        upsert_log(habit_id, date, status)
+    for habit_id, status_data in habit_statuses.items():
+        # Support both simple boolean and dict format
+        if isinstance(status_data, dict):
+            status = status_data.get('status', False)
+            value = status_data.get('value')
+        else:
+            status = status_data
+            value = None
+
+        upsert_log(habit_id, date, status, value)
         count += 1
 
     return count
+
+
+def get_value_stats(habit_id, days=30):
+    """
+    Get value statistics for a habit over the last N days.
+
+    Args:
+        habit_id: The habit ID
+        days: Number of days to look back (default: 30)
+
+    Returns:
+        Dictionary with:
+        {
+            'total': float,       # Sum of all values
+            'average': float,     # Average value
+            'min': float,         # Minimum value
+            'max': float,         # Maximum value
+            'count': int,         # Number of entries with values
+            'latest_value': float # Most recent value
+        }
+    """
+    db = get_db()
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days - 1)
+
+    query = """
+        SELECT value, date
+        FROM logs
+        WHERE habit_id = ?
+          AND date >= ?
+          AND date <= ?
+          AND value IS NOT NULL
+        ORDER BY date DESC
+    """
+
+    results = db.execute_query(
+        query,
+        (habit_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+    )
+
+    if not results:
+        return {
+            'total': 0,
+            'average': 0,
+            'min': None,
+            'max': None,
+            'count': 0,
+            'latest_value': None
+        }
+
+    values = [row['value'] for row in results]
+    count = len(values)
+
+    return {
+        'total': round(sum(values), 2),
+        'average': round(sum(values) / count, 2) if count > 0 else 0,
+        'min': round(min(values), 2),
+        'max': round(max(values), 2),
+        'count': count,
+        'latest_value': round(results[0]['value'], 2) if results else None
+    }
 
 
 def get_completion_stats(habit_id, days=30):

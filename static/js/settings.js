@@ -18,6 +18,38 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function setupEventListeners() {
     document.getElementById('add-habit-form').addEventListener('submit', handleAddHabit);
+    document.getElementById('edit-habit-form').addEventListener('submit', handleEditHabit);
+    document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
+
+    // Toggle value unit input and aggregation type visibility (Add form)
+    const tracksValueCheckbox = document.getElementById('habit-tracks-value');
+    const valueUnitInput = document.getElementById('habit-value-unit');
+    const valueAggregationTypeSelect = document.getElementById('habit-value-aggregation-type');
+
+    tracksValueCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            valueUnitInput.classList.remove('hidden');
+            valueAggregationTypeSelect.classList.remove('hidden');
+            valueUnitInput.focus();
+        } else {
+            valueUnitInput.classList.add('hidden');
+            valueAggregationTypeSelect.classList.add('hidden');
+            valueUnitInput.value = '';
+            valueAggregationTypeSelect.value = 'absolute';
+        }
+    });
+
+    // Toggle value fields visibility (Edit form)
+    const editTracksValueCheckbox = document.getElementById('edit-habit-tracks-value');
+    const editValueFields = document.getElementById('edit-value-fields');
+
+    editTracksValueCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            editValueFields.classList.remove('hidden');
+        } else {
+            editValueFields.classList.add('hidden');
+        }
+    });
 }
 
 /**
@@ -113,6 +145,15 @@ function createHabitElement(habit) {
     visibilityBadge.textContent = habit.is_public ? 'Public' : 'Private';
     badgesDiv.appendChild(visibilityBadge);
 
+    // Value tracking badge
+    if (habit.tracks_value) {
+        const valueBadge = document.createElement('span');
+        valueBadge.className = 'px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded';
+        const aggregationType = habit.value_aggregation_type === 'cumulative' ? '∑' : '📊';
+        valueBadge.textContent = habit.value_unit ? `${aggregationType} ${habit.value_unit}` : `${aggregationType} Value`;
+        badgesDiv.appendChild(valueBadge);
+    }
+
     // Active/Inactive badge
     if (!habit.is_active) {
         const activeBadge = document.createElement('span');
@@ -156,9 +197,15 @@ async function handleAddHabit(e) {
 
     const nameInput = document.getElementById('habit-name');
     const isPublicCheckbox = document.getElementById('habit-is-public');
+    const tracksValueCheckbox = document.getElementById('habit-tracks-value');
+    const valueUnitInput = document.getElementById('habit-value-unit');
+    const valueAggregationTypeSelect = document.getElementById('habit-value-aggregation-type');
 
     const name = nameInput.value.trim();
     const isPublic = isPublicCheckbox.checked;
+    const tracksValue = tracksValueCheckbox.checked;
+    const valueUnit = tracksValue ? valueUnitInput.value.trim() || null : null;
+    const valueAggregationType = tracksValue ? valueAggregationTypeSelect.value : 'absolute';
 
     if (!name) return;
 
@@ -170,7 +217,10 @@ async function handleAddHabit(e) {
             },
             body: JSON.stringify({
                 name: name,
-                is_public: isPublic
+                is_public: isPublic,
+                tracks_value: tracksValue,
+                value_unit: valueUnit,
+                value_aggregation_type: valueAggregationType
             })
         });
 
@@ -184,6 +234,11 @@ async function handleAddHabit(e) {
         // Clear form
         nameInput.value = '';
         isPublicCheckbox.checked = true;
+        tracksValueCheckbox.checked = false;
+        valueUnitInput.value = '';
+        valueUnitInput.classList.add('hidden');
+        valueAggregationTypeSelect.value = 'absolute';
+        valueAggregationTypeSelect.classList.add('hidden');
 
         // Show success
         showStatus('Habit created successfully!', 'success');
@@ -200,18 +255,64 @@ async function handleAddHabit(e) {
 /**
  * Edit habit (simple prompt-based for now)
  */
-async function editHabit(habit) {
-    const newName = prompt('Edit habit name:', habit.name);
-    if (!newName || newName === habit.name) return;
+/**
+ * Open edit modal and populate with habit data
+ */
+function editHabit(habit) {
+    // Populate form fields
+    document.getElementById('edit-habit-id').value = habit.id;
+    document.getElementById('edit-habit-name').value = habit.name;
+    document.getElementById('edit-habit-is-public').checked = habit.is_public;
+    document.getElementById('edit-habit-tracks-value').checked = habit.tracks_value;
+    document.getElementById('edit-habit-value-unit').value = habit.value_unit || '';
+    document.getElementById('edit-habit-value-aggregation-type').value = habit.value_aggregation_type || 'absolute';
+
+    // Show/hide value fields based on tracks_value
+    const editValueFields = document.getElementById('edit-value-fields');
+    if (habit.tracks_value) {
+        editValueFields.classList.remove('hidden');
+    } else {
+        editValueFields.classList.add('hidden');
+    }
+
+    // Show modal
+    document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+/**
+ * Close edit modal
+ */
+function closeEditModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+}
+
+/**
+ * Handle edit habit form submission
+ */
+async function handleEditHabit(e) {
+    e.preventDefault();
+
+    const habitId = document.getElementById('edit-habit-id').value;
+    const name = document.getElementById('edit-habit-name').value.trim();
+    const isPublic = document.getElementById('edit-habit-is-public').checked;
+    const tracksValue = document.getElementById('edit-habit-tracks-value').checked;
+    const valueUnit = tracksValue ? document.getElementById('edit-habit-value-unit').value.trim() || null : null;
+    const valueAggregationType = tracksValue ? document.getElementById('edit-habit-value-aggregation-type').value : 'absolute';
+
+    if (!name) return;
 
     try {
-        const response = await fetch(`/api/habits/${habit.id}`, {
+        const response = await fetch(`/api/habits/${habitId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                name: newName.trim()
+                name: name,
+                is_public: isPublic,
+                tracks_value: tracksValue,
+                value_unit: valueUnit,
+                value_aggregation_type: valueAggregationType
             })
         });
 
@@ -221,6 +322,7 @@ async function editHabit(habit) {
         }
 
         showStatus('Habit updated successfully!', 'success');
+        closeEditModal();
         await loadHabits();
 
     } catch (error) {

@@ -140,12 +140,16 @@ async function loadTrackingData() {
 }
 
 /**
- * Create habit element with toggle button
+ * Create habit element with toggle button and optional value input
  */
 function createHabitElement(habit) {
     const div = document.createElement('div');
-    div.className = 'bg-white rounded-lg shadow-sm p-4 flex items-center justify-between transition hover:shadow-md';
+    div.className = 'bg-white rounded-lg shadow-sm p-4 transition hover:shadow-md';
     div.dataset.habitId = habit.id;
+
+    // Wrapper for flexible layout
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex items-center justify-between gap-4';
 
     // Habit info
     const infoDiv = document.createElement('div');
@@ -165,7 +169,40 @@ function createHabitElement(habit) {
         infoDiv.appendChild(badge);
     }
 
-    div.appendChild(infoDiv);
+    // Value tracking badge
+    if (habit.tracks_value) {
+        const valueBadge = document.createElement('span');
+        valueBadge.className = 'ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded';
+        valueBadge.textContent = habit.value_unit ? `📊 ${habit.value_unit}` : '📊';
+        infoDiv.appendChild(valueBadge);
+    }
+
+    wrapper.appendChild(infoDiv);
+
+    // Controls div (value input + button)
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'flex items-center gap-3';
+
+    // Value input for value-tracking habits
+    if (habit.tracks_value) {
+        const valueInput = document.createElement('input');
+        valueInput.type = 'number';
+        valueInput.step = 'any';
+        valueInput.placeholder = habit.value_unit || 'Value';
+        valueInput.className = 'w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent';
+        valueInput.dataset.habitId = habit.id;
+        valueInput.value = habit.value || '';
+        valueInput.setAttribute('aria-label', `Value for ${habit.name}`);
+
+        valueInput.addEventListener('input', (e) => {
+            const habit = habitsData.habits.find(h => h.id === parseInt(e.target.dataset.habitId));
+            if (habit) {
+                habit.value = e.target.value ? parseFloat(e.target.value) : null;
+            }
+        });
+
+        controlsDiv.appendChild(valueInput);
+    }
 
     // Toggle button
     const button = document.createElement('button');
@@ -186,7 +223,10 @@ function createHabitElement(habit) {
 
     button.addEventListener('click', () => toggleHabit(habit.id));
 
-    div.appendChild(button);
+    controlsDiv.appendChild(button);
+    wrapper.appendChild(controlsDiv);
+
+    div.appendChild(wrapper);
 
     return div;
 }
@@ -233,10 +273,19 @@ async function saveDayLogs() {
     saveBtn.textContent = 'Saving...';
 
     // Prepare logs data
-    const logs = habitsData.habits.map(habit => ({
-        habit_id: habit.id,
-        status: habit.status
-    }));
+    const logs = habitsData.habits.map(habit => {
+        const logEntry = {
+            habit_id: habit.id,
+            status: habit.status
+        };
+
+        // Include value if the habit tracks values
+        if (habit.tracks_value && habit.value !== null && habit.value !== undefined && habit.value !== '') {
+            logEntry.value = habit.value;
+        }
+
+        return logEntry;
+    });
 
     try {
         const response = await fetch('/api/track/save', {

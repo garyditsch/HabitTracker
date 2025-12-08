@@ -26,9 +26,10 @@ This guide covers deploying the Health Tracker application to a traditional VPS 
 - **Python**: 3.10 or higher
 - **SSH Access**: Root or sudo user
 
-### Domain Setup (Optional but Recommended)
+### Domain Setup (Required for SSL)
 - Domain name pointed to your server's IP address
-- DNS A record configured (e.g., `habits.example.com`)
+- DNS A record configured (e.g., `habit.garyditsch.com`)
+- For Cloudflare DNS: Set SSL/TLS encryption mode to "Full (strict)"
 
 ---
 
@@ -49,8 +50,10 @@ sudo apt upgrade -y
 
 Install required system packages:
 ```bash
-sudo apt install -y python3 python3-pip python3-venv nginx git curl
+sudo apt install -y nginx git curl
 ```
+
+**Note**: We'll use `uv` to install and manage Python versions, so we don't need system `python3`, `python3-pip`, or `python3-venv` packages.
 
 ### 2. Create Application User
 
@@ -85,6 +88,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.cargo/env
 ```
 
+Install Python using uv:
+```bash
+uv python install 3.11
+```
+
 Create virtual environment and install dependencies:
 ```bash
 cd /opt/healthtracker/app
@@ -105,10 +113,7 @@ Initialize the database:
 uv run python -c "from models import init_database; init_database()"
 ```
 
-Optionally seed with sample data:
-```bash
-uv run python seed_data.py
-```
+**Note**: Skip database seeding for production. The `seed_data.py` script is only for development/testing.
 
 ---
 
@@ -131,7 +136,7 @@ EOF
 
 Generate a secure SECRET_KEY:
 ```bash
-python3 -c 'import secrets; print(secrets.token_hex(32))'
+uv run python -c 'import secrets; print(secrets.token_hex(32))'
 ```
 
 Set proper permissions:
@@ -220,7 +225,7 @@ Add the following configuration:
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name habit.garyditsch.com;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -284,7 +289,7 @@ sudo apt install -y certbot python3-certbot-nginx
 
 Obtain SSL certificate:
 ```bash
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d habit.garyditsch.com
 ```
 
 Follow the prompts and select:
@@ -298,6 +303,28 @@ sudo certbot renew --dry-run
 ```
 
 Certbot will automatically renew certificates before they expire.
+
+### Cloudflare Configuration
+
+If using Cloudflare DNS (like habit.garyditsch.com):
+
+1. **Add DNS A Record** in Cloudflare dashboard:
+   - Type: A
+   - Name: habit
+   - IPv4 address: Your VPS IP address
+   - Proxy status: Proxied (orange cloud) recommended
+
+2. **Configure SSL/TLS** in Cloudflare:
+   - Go to SSL/TLS settings
+   - Set encryption mode to **"Full (strict)"**
+   - This ensures end-to-end encryption (Visitor → Cloudflare → Your Server)
+
+3. **Additional Security** (Optional):
+   - Enable "Always Use HTTPS"
+   - Enable "Automatic HTTPS Rewrites"
+   - Consider enabling "HSTS" after testing
+
+**Note**: With Cloudflare proxy enabled, you get DDoS protection and CDN benefits automatically.
 
 ---
 

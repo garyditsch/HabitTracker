@@ -18,7 +18,8 @@ from .log_service import (
     delete_log,
     get_habit_streak,
     save_day_logs,
-    get_completion_stats
+    get_completion_stats,
+    get_value_stats
 )
 
 from .dashboard_service import (
@@ -56,6 +57,7 @@ __all__ = [
     'get_habit_streak',
     'save_day_logs',
     'get_completion_stats',
+    'get_value_stats',
     # Dashboard service
     'get_public_dashboard_data',
     'get_admin_tracking_data',

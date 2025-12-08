@@ -77,12 +77,38 @@ function createHabitCard(habit) {
     // Format created date
     const createdDate = habit.created_at ? formatDisplayDate(habit.created_at.split(' ')[0]) : 'Unknown';
 
+    // Build value stats HTML if habit tracks values
+    let valueStatsHtml = '';
+    if (habit.tracks_value) {
+        if (habit.value_aggregation_type === 'cumulative' && habit.value_aggregations) {
+            // Show cumulative totals only
+            valueStatsHtml = `
+                <div class="flex gap-4 mt-2 text-sm text-gray-600">
+                    <span>Week: ${habit.value_aggregations.week} ${habit.value_unit || ''}</span>
+                    <span>Month: ${habit.value_aggregations.month} ${habit.value_unit || ''}</span>
+                    <span>Year: ${habit.value_aggregations.year} ${habit.value_unit || ''}</span>
+                </div>
+            `;
+        } else if (habit.value_stats) {
+            // Show absolute value stats (latest, average) only for absolute type
+            const latest = habit.value_stats.latest_value !== null ? habit.value_stats.latest_value : '--';
+            const avg = habit.value_stats.average !== null ? habit.value_stats.average.toFixed(1) : '--';
+            valueStatsHtml = `
+                <div class="flex gap-4 mt-2 text-sm text-gray-600">
+                    <span>Latest: ${latest} ${habit.value_unit || ''}</span>
+                    <span>Avg: ${avg} ${habit.value_unit || ''}</span>
+                </div>
+            `;
+        }
+    }
+
     header.innerHTML = `
         <h3 class="text-xl font-semibold text-gray-800">${escapeHtml(habit.name)}</h3>
         <div class="flex gap-4 mt-2 text-sm text-gray-600">
             <span>🔥 ${habit.current_streak} day streak</span>
             <span>✓ ${habit.completion_rate}% (${habit.completed_days}/${habit.total_days})</span>
         </div>
+        ${valueStatsHtml}
         <div class="mt-1 text-xs text-gray-500">
             Started: ${createdDate}
         </div>
@@ -118,11 +144,12 @@ function renderHabitChart(canvasId, habit) {
     // Prepare data for Chart.js
     const labels = [];
     const data = [];
+    const valueData = [];
 
-    // Create a map of dates to status
+    // Create a map of dates to status and value
     const logsMap = {};
     habit.logs.forEach(log => {
-        logsMap[log.date] = log.status;
+        logsMap[log.date] = { status: log.status, value: log.value };
     });
 
     // Get last 30 days
@@ -133,10 +160,24 @@ function renderHabitChart(canvasId, habit) {
         const dateStr = formatDate(date);
 
         labels.push(formatShortDate(date));
-        data.push(logsMap[dateStr] ? 1 : 0);
+        const logData = logsMap[dateStr];
+        data.push(logData ? (logData.status ? 1 : 0) : 0);
+        valueData.push(logData ? logData.value : null);
     }
 
-    // Create chart
+    // If habit tracks values, render value chart
+    if (habit.tracks_value) {
+        renderValueChart(ctx, labels, data, valueData, habit);
+    } else {
+        // Render standard completion chart
+        renderCompletionChart(ctx, labels, data);
+    }
+}
+
+/**
+ * Render standard completion chart (for non-value habits)
+ */
+function renderCompletionChart(ctx, labels, data) {
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -182,6 +223,65 @@ function renderHabitChart(canvasId, habit) {
                     },
                     grid: {
                         display: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 10
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Render value chart (for value-tracking habits)
+ */
+function renderValueChart(ctx, labels, completionData, valueData, habit) {
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Value',
+                data: valueData,
+                borderColor: '#3B82F6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                yAxisID: 'y',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            return value !== null ? `${value} ${habit.value_unit || ''}` : 'No data';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + (habit.value_unit ? ' ' + habit.value_unit : '');
+                        }
                     }
                 },
                 x: {
