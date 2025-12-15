@@ -455,8 +455,10 @@ def get_yearly_heatmap_data(year=None):
 
             days_data.append(day_data)
 
-            # Only include in overall stats if habits existed (for accurate statistics)
-            if total_habits_on_date > 0:
+            # Only include in overall stats if habits existed AND the date has passed
+            # (for accurate statistics - don't count future days)
+            today = datetime.now().date()
+            if total_habits_on_date > 0 and date_obj <= today:
                 all_days_data.append(day_data)
 
         month_data = {
