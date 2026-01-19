@@ -154,6 +154,16 @@ function createHabitElement(habit) {
         badgesDiv.appendChild(valueBadge);
     }
 
+    // Categories badge
+    if (habit.categories) {
+        const categoryBadge = document.createElement('span');
+        categoryBadge.className = 'px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded';
+        const categoryCount = habit.categories.split(',').length;
+        categoryBadge.textContent = `🏷️ ${categoryCount} categories`;
+        categoryBadge.title = habit.categories;
+        badgesDiv.appendChild(categoryBadge);
+    }
+
     // Active/Inactive badge
     if (!habit.is_active) {
         const activeBadge = document.createElement('span');
@@ -200,12 +210,14 @@ async function handleAddHabit(e) {
     const tracksValueCheckbox = document.getElementById('habit-tracks-value');
     const valueUnitInput = document.getElementById('habit-value-unit');
     const valueAggregationTypeSelect = document.getElementById('habit-value-aggregation-type');
+    const categoriesInput = document.getElementById('habit-categories');
 
     const name = nameInput.value.trim();
     const isPublic = isPublicCheckbox.checked;
     const tracksValue = tracksValueCheckbox.checked;
     const valueUnit = tracksValue ? valueUnitInput.value.trim() || null : null;
     const valueAggregationType = tracksValue ? valueAggregationTypeSelect.value : 'absolute';
+    const categories = categoriesInput.value.trim() || null;
 
     if (!name) return;
 
@@ -220,7 +232,8 @@ async function handleAddHabit(e) {
                 is_public: isPublic,
                 tracks_value: tracksValue,
                 value_unit: valueUnit,
-                value_aggregation_type: valueAggregationType
+                value_aggregation_type: valueAggregationType,
+                categories: categories
             })
         });
 
@@ -239,6 +252,7 @@ async function handleAddHabit(e) {
         valueUnitInput.classList.add('hidden');
         valueAggregationTypeSelect.value = 'absolute';
         valueAggregationTypeSelect.classList.add('hidden');
+        categoriesInput.value = '';
 
         // Show success
         showStatus('Habit created successfully!', 'success');
@@ -266,6 +280,7 @@ function editHabit(habit) {
     document.getElementById('edit-habit-tracks-value').checked = habit.tracks_value;
     document.getElementById('edit-habit-value-unit').value = habit.value_unit || '';
     document.getElementById('edit-habit-value-aggregation-type').value = habit.value_aggregation_type || 'absolute';
+    document.getElementById('edit-habit-categories').value = habit.categories || '';
 
     // Show/hide value fields based on tracks_value
     const editValueFields = document.getElementById('edit-value-fields');
@@ -298,6 +313,7 @@ async function handleEditHabit(e) {
     const tracksValue = document.getElementById('edit-habit-tracks-value').checked;
     const valueUnit = tracksValue ? document.getElementById('edit-habit-value-unit').value.trim() || null : null;
     const valueAggregationType = tracksValue ? document.getElementById('edit-habit-value-aggregation-type').value : 'absolute';
+    const categories = document.getElementById('edit-habit-categories').value.trim() || null;
 
     if (!name) return;
 
@@ -312,7 +328,8 @@ async function handleEditHabit(e) {
                 is_public: isPublic,
                 tracks_value: tracksValue,
                 value_unit: valueUnit,
-                value_aggregation_type: valueAggregationType
+                value_aggregation_type: valueAggregationType,
+                categories: categories
             })
         });
 

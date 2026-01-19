@@ -93,10 +93,46 @@ def migration_002_add_value_aggregation_type(conn):
     print("Migration 002 completed successfully!")
 
 
+def migration_003_add_habit_categories(conn):
+    """
+    Migration 003: Add habit categories columns.
+
+    Adds:
+    - habits.categories (TEXT) - comma-separated list of category options
+    - logs.category (TEXT) - selected category for that log entry
+    """
+    print("Running migration 003: Add habit categories columns...")
+
+    # Check if columns already exist
+    cursor = conn.execute("PRAGMA table_info(habits)")
+    habit_columns = {row[1] for row in cursor.fetchall()}
+
+    cursor = conn.execute("PRAGMA table_info(logs)")
+    log_columns = {row[1] for row in cursor.fetchall()}
+
+    # Add column to habits table if it doesn't exist
+    if 'categories' not in habit_columns:
+        conn.execute("ALTER TABLE habits ADD COLUMN categories TEXT")
+        print("  ✓ Added habits.categories column")
+    else:
+        print("  - habits.categories already exists, skipping")
+
+    # Add column to logs table if it doesn't exist
+    if 'category' not in log_columns:
+        conn.execute("ALTER TABLE logs ADD COLUMN category TEXT")
+        print("  ✓ Added logs.category column")
+    else:
+        print("  - logs.category already exists, skipping")
+
+    conn.commit()
+    print("Migration 003 completed successfully!")
+
+
 # Migration registry - add new migrations here in order
 MIGRATIONS = [
     migration_001_add_value_tracking,
     migration_002_add_value_aggregation_type,
+    migration_003_add_habit_categories,
 ]
 
 

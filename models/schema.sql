@@ -18,18 +18,21 @@ CREATE TABLE IF NOT EXISTS habits (
     tracks_value BOOLEAN DEFAULT 0 NOT NULL,
     value_unit TEXT,
     value_aggregation_type TEXT DEFAULT 'absolute' NOT NULL,
+    categories TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- Logs Table
 -- Stores daily completion status for each habit
 -- Optional value field stores numeric data (e.g., pushup count, weight)
+-- Optional category field stores the selected category for that log entry
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     habit_id INTEGER NOT NULL,
     date DATE NOT NULL,
     status BOOLEAN NOT NULL,
     value REAL,
+    category TEXT,
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
     UNIQUE(habit_id, date)
 );

@@ -297,6 +297,103 @@ The core value tracking functionality is complete and ready to use!
 
 ---
 
+## Phase 12: Habit Categories
+
+**Goal:** Allow habits to have optional categories that can be selected when logging (e.g., Exercise → Stretching, Cardio, Strength).
+
+### Database Changes
+- [x] Add `categories` column to habits table (TEXT, nullable) - comma-separated list
+- [x] Add `category` column to logs table (TEXT, nullable) - selected category for that log
+- [x] Create migration 003 to add category columns
+
+### Backend Service Layer
+- [x] Update `habit_service.py`:
+  - [x] Add categories to all SELECT queries
+  - [x] Update create_habit() to accept categories parameter
+  - [x] Add categories to allowed_fields in update_habit()
+- [x] Update `log_service.py`:
+  - [x] Modify upsert_log() to accept optional category parameter
+  - [x] Modify save_day_logs() to handle category in habit_statuses
+  - [x] Update all queries to include category column
+- [x] Update `dashboard_service.py`:
+  - [x] Include categories in habit data
+  - [x] Include category in log data
+
+### API Routes
+- [x] Update `routes/admin.py`:
+  - [x] Modify /api/habits POST to accept categories field
+  - [x] Modify /api/habits/<id> PUT to update categories
+  - [x] Modify /api/track/save to accept category in logs data
+  - [x] Modify /api/track/data to return categories
+
+### Frontend - Admin Interface
+- [x] Update `templates/admin/settings.html`:
+  - [x] Add "Categories" text input to habit creation form
+  - [x] Add categories field to edit modal
+- [x] Update `static/js/settings.js`:
+  - [x] Handle categories field in habit creation/editing
+  - [x] Display categories badge in habit list
+- [x] Update `static/js/tracking.js`:
+  - [x] Show category dropdown when logging a habit with categories
+  - [x] Capture selected category when saving logs
+  - [x] Include category in API request payload
+
+### Frontend - Public Dashboard
+- [x] Update `static/js/dashboard.js`:
+  - [x] Show category breakdown summary in habit cards (e.g., "Cardio: 5, Strength: 3")
+  - [x] Show category in chart tooltips when hovering over data points
+
+### Testing
+- [ ] Test creating habit with categories
+- [ ] Test logging with category selection
+- [ ] Test that habits without categories still work normally
+- [x] Verify category data appears in dashboard
+
+## Summary - Phase 12: Habit Categories
+
+**Completed:**
+✅ Database schema updated with categories columns (habits.categories, logs.category)
+✅ Migration 003 created and executed successfully
+✅ Backend services updated to handle category data
+✅ API routes updated with validation (max 500 chars for categories)
+✅ Settings page updated with categories input field
+✅ Edit modal updated with categories field
+✅ Tracking page updated with category dropdown
+✅ All JavaScript handlers updated for category capture
+✅ Dashboard updated to show category breakdown and tooltips
+
+**How to Use:**
+1. When creating a habit, optionally add categories in the "Categories" field (comma-separated)
+   - Example: "Cardio, Strength, Stretching"
+2. When tracking a habit with categories, a dropdown appears to select which type
+3. The selected category is saved with the log entry
+4. On the dashboard:
+   - Habit cards show category breakdown (e.g., "Cardio: 5, Strength: 3")
+   - Chart tooltips show the category when hovering over data points
+
+**Example:**
+- Create habit "Exercise" with categories "Cardio, Strength, Stretching, Flexibility"
+- When logging Exercise, select "Cardio" from the dropdown
+- Save Day - the category is stored with the completion log
+- View Dashboard - see "Cardio: 5" breakdown and hover over chart points to see category
+
+---
+
+## Chart Enhancement: Auto-scale Value Charts
+
+**Goal:** Improve visualization of value-tracking habits by auto-scaling the Y-axis to the actual data range.
+
+**Problem:** The weight chart was showing a scale from 0 to ~200, but actual data was 158-161 lbs, making daily variations appear nearly flat.
+
+**Solution:**
+- [x] Modified `renderValueChart()` in `static/js/dashboard.js`
+- [x] Removed `beginAtZero: true` from Y-axis config
+- [x] Added `grace: '5%'` for padding above/below the data range
+
+**Result:** Value charts now auto-scale to the data range (e.g., 156-163 instead of 0-200), making variations much more visible.
+
+---
+
 ## Quick Start
 
 ```bash

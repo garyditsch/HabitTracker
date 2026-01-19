@@ -60,7 +60,7 @@ def get_public_dashboard_data(days=30):
 
         # Get logs for this habit in the date range
         logs_query = """
-            SELECT date, status, value
+            SELECT date, status, value, category
             FROM logs
             WHERE habit_id = ?
               AND date >= ?
@@ -77,7 +77,8 @@ def get_public_dashboard_data(days=30):
             {
                 'date': log['date'],
                 'status': bool(log['status']),
-                'value': log['value']
+                'value': log['value'],
+                'category': log['category']
             }
             for log in logs
         ]
@@ -95,6 +96,7 @@ def get_public_dashboard_data(days=30):
             'tracks_value': bool(habit['tracks_value']) if 'tracks_value' in habit.keys() else False,
             'value_unit': habit['value_unit'] if 'value_unit' in habit.keys() else None,
             'value_aggregation_type': habit['value_aggregation_type'] if 'value_aggregation_type' in habit.keys() else 'absolute',
+            'categories': habit['categories'] if 'categories' in habit.keys() else None,
             'current_streak': streak_info['current_streak'],
             'completion_rate': stats['completion_rate'],
             'completed_days': stats['completed_days'],
@@ -157,17 +159,18 @@ def get_admin_tracking_data(date):
 
     # Get existing logs for this date
     logs_query = """
-        SELECT habit_id, status, value
+        SELECT habit_id, status, value, category
         FROM logs
         WHERE date = ?
     """
     logs = db.execute_query(logs_query, (date_str,))
 
-    # Create a mapping of habit_id to status and value
+    # Create a mapping of habit_id to status, value, and category
     logs_map = {
         log['habit_id']: {
             'status': bool(log['status']),
-            'value': log['value']
+            'value': log['value'],
+            'category': log['category']
         }
         for log in logs
     }
@@ -180,7 +183,7 @@ def get_admin_tracking_data(date):
     for habit in habits:
         habit_id = habit['id']
         is_logged = habit_id in logs_map
-        log_data = logs_map.get(habit_id, {'status': False, 'value': None})
+        log_data = logs_map.get(habit_id, {'status': False, 'value': None, 'category': None})
 
         habit_data = {
             'id': habit_id,
@@ -190,9 +193,11 @@ def get_admin_tracking_data(date):
             'tracks_value': bool(habit['tracks_value']) if 'tracks_value' in habit.keys() else False,
             'value_unit': habit['value_unit'] if 'value_unit' in habit.keys() else None,
             'value_aggregation_type': habit['value_aggregation_type'] if 'value_aggregation_type' in habit.keys() else 'absolute',
+            'categories': habit['categories'] if 'categories' in habit.keys() else None,
             'is_logged': is_logged,
             'status': log_data['status'],
-            'value': log_data['value']
+            'value': log_data['value'],
+            'category': log_data['category']
         }
 
         tracking_data['habits'].append(habit_data)

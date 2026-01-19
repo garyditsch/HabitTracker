@@ -102,6 +102,33 @@ function createHabitCard(habit) {
         }
     }
 
+    // Build category breakdown HTML if habit has categories
+    let categoryStatsHtml = '';
+    if (habit.categories && habit.logs && habit.logs.length > 0) {
+        // Count category occurrences from logs
+        const categoryCounts = {};
+        habit.logs.forEach(log => {
+            if (log.status && log.category) {
+                categoryCounts[log.category] = (categoryCounts[log.category] || 0) + 1;
+            }
+        });
+
+        // Build category breakdown if any categories were logged
+        const categoryEntries = Object.entries(categoryCounts);
+        if (categoryEntries.length > 0) {
+            // Sort by count descending
+            categoryEntries.sort((a, b) => b[1] - a[1]);
+            const categoryItems = categoryEntries.map(([cat, count]) =>
+                `<span class="inline-flex items-center px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-xs">${escapeHtml(cat)}: ${count}</span>`
+            ).join(' ');
+            categoryStatsHtml = `
+                <div class="flex flex-wrap gap-1 mt-2">
+                    ${categoryItems}
+                </div>
+            `;
+        }
+    }
+
     header.innerHTML = `
         <h3 class="text-xl font-semibold text-gray-800">${escapeHtml(habit.name)}</h3>
         <div class="flex gap-4 mt-2 text-sm text-gray-600">
@@ -109,6 +136,7 @@ function createHabitCard(habit) {
             <span>✓ ${habit.completion_rate}% (${habit.completed_days}/${habit.total_days})</span>
         </div>
         ${valueStatsHtml}
+        ${categoryStatsHtml}
         <div class="mt-1 text-xs text-gray-500">
             Started: ${createdDate}
         </div>
@@ -145,11 +173,12 @@ function renderHabitChart(canvasId, habit) {
     const labels = [];
     const data = [];
     const valueData = [];
+    const categoryData = [];
 
-    // Create a map of dates to status and value
+    // Create a map of dates to status, value, and category
     const logsMap = {};
     habit.logs.forEach(log => {
-        logsMap[log.date] = { status: log.status, value: log.value };
+        logsMap[log.date] = { status: log.status, value: log.value, category: log.category };
     });
 
     // Get last 30 days
@@ -163,21 +192,22 @@ function renderHabitChart(canvasId, habit) {
         const logData = logsMap[dateStr];
         data.push(logData ? (logData.status ? 1 : 0) : 0);
         valueData.push(logData ? logData.value : null);
+        categoryData.push(logData ? logData.category : null);
     }
 
     // If habit tracks values, render value chart
     if (habit.tracks_value) {
-        renderValueChart(ctx, labels, data, valueData, habit);
+        renderValueChart(ctx, labels, data, valueData, categoryData, habit);
     } else {
         // Render standard completion chart
-        renderCompletionChart(ctx, labels, data);
+        renderCompletionChart(ctx, labels, data, categoryData, habit);
     }
 }
 
 /**
  * Render standard completion chart (for non-value habits)
  */
-function renderCompletionChart(ctx, labels, data) {
+function renderCompletionChart(ctx, labels, data, categoryData, habit) {
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -206,7 +236,12 @@ function renderCompletionChart(ctx, labels, data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.parsed.y === 1 ? 'Completed ✓' : 'Not completed';
+                            const completed = context.parsed.y === 1;
+                            const category = categoryData[context.dataIndex];
+                            if (completed) {
+                                return category ? `Completed ✓ (${category})` : 'Completed ✓';
+                            }
+                            return 'Not completed';
                         }
                     }
                 }
@@ -241,7 +276,7 @@ function renderCompletionChart(ctx, labels, data) {
 /**
  * Render value chart (for value-tracking habits)
  */
-function renderValueChart(ctx, labels, completionData, valueData, habit) {
+function renderValueChart(ctx, labels, completionData, valueData, categoryData, habit) {
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -270,14 +305,20 @@ function renderValueChart(ctx, labels, completionData, valueData, habit) {
                     callbacks: {
                         label: function(context) {
                             const value = context.parsed.y;
-                            return value !== null ? `${value} ${habit.value_unit || ''}` : 'No data';
+                            const category = categoryData[context.dataIndex];
+                            if (value !== null) {
+                                const valueStr = `${value} ${habit.value_unit || ''}`;
+                                return category ? `${valueStr} (${category})` : valueStr;
+                            }
+                            return 'No data';
                         }
                     }
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: true,
+                    // Auto-scale to data range with 5% padding
+                    grace: '5%',
                     ticks: {
                         callback: function(value) {
                             return value + (habit.value_unit ? ' ' + habit.value_unit : '');

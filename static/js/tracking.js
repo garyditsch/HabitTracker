@@ -140,7 +140,7 @@ async function loadTrackingData() {
 }
 
 /**
- * Create habit element with toggle button and optional value input
+ * Create habit element with toggle button, optional value input, and optional category dropdown
  */
 function createHabitElement(habit) {
     const div = document.createElement('div');
@@ -177,11 +177,55 @@ function createHabitElement(habit) {
         infoDiv.appendChild(valueBadge);
     }
 
+    // Categories badge
+    if (habit.categories) {
+        const categoryBadge = document.createElement('span');
+        categoryBadge.className = 'ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded';
+        categoryBadge.textContent = '🏷️';
+        categoryBadge.title = habit.categories;
+        infoDiv.appendChild(categoryBadge);
+    }
+
     wrapper.appendChild(infoDiv);
 
-    // Controls div (value input + button)
+    // Controls div (category dropdown + value input + button)
     const controlsDiv = document.createElement('div');
     controlsDiv.className = 'flex items-center gap-3';
+
+    // Category dropdown for habits with categories
+    if (habit.categories) {
+        const categorySelect = document.createElement('select');
+        categorySelect.className = 'px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent';
+        categorySelect.dataset.habitId = habit.id;
+        categorySelect.setAttribute('aria-label', `Category for ${habit.name}`);
+
+        // Add empty option
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = 'Select category...';
+        categorySelect.appendChild(emptyOption);
+
+        // Parse and add category options
+        const categories = habit.categories.split(',').map(c => c.trim()).filter(c => c);
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            if (habit.category === cat) {
+                option.selected = true;
+            }
+            categorySelect.appendChild(option);
+        });
+
+        categorySelect.addEventListener('change', (e) => {
+            const habitData = habitsData.habits.find(h => h.id === parseInt(e.target.dataset.habitId));
+            if (habitData) {
+                habitData.category = e.target.value || null;
+            }
+        });
+
+        controlsDiv.appendChild(categorySelect);
+    }
 
     // Value input for value-tracking habits
     if (habit.tracks_value) {
@@ -195,9 +239,9 @@ function createHabitElement(habit) {
         valueInput.setAttribute('aria-label', `Value for ${habit.name}`);
 
         valueInput.addEventListener('input', (e) => {
-            const habit = habitsData.habits.find(h => h.id === parseInt(e.target.dataset.habitId));
-            if (habit) {
-                habit.value = e.target.value ? parseFloat(e.target.value) : null;
+            const habitData = habitsData.habits.find(h => h.id === parseInt(e.target.dataset.habitId));
+            if (habitData) {
+                habitData.value = e.target.value ? parseFloat(e.target.value) : null;
             }
         });
 
@@ -282,6 +326,11 @@ async function saveDayLogs() {
         // Include value if the habit tracks values
         if (habit.tracks_value && habit.value !== null && habit.value !== undefined && habit.value !== '') {
             logEntry.value = habit.value;
+        }
+
+        // Include category if the habit has categories and one is selected
+        if (habit.categories && habit.category) {
+            logEntry.category = habit.category;
         }
 
         return logEntry;

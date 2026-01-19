@@ -111,11 +111,15 @@ def save_tracking():
     habit_statuses = {}
     for log in logs:
         habit_id = log['habit_id']
-        # Check if value is provided
-        if 'value' in log and log['value'] is not None:
+        has_value = 'value' in log and log['value'] is not None
+        has_category = 'category' in log and log['category'] is not None
+
+        # Check if value or category is provided
+        if has_value or has_category:
             habit_statuses[habit_id] = {
                 'status': log['status'],
-                'value': log['value']
+                'value': log.get('value'),
+                'category': log.get('category')
             }
         else:
             habit_statuses[habit_id] = log['status']
@@ -160,6 +164,8 @@ def get_habits():
             'order_index': h['order_index'],
             'tracks_value': bool(h['tracks_value']) if 'tracks_value' in h.keys() else False,
             'value_unit': h['value_unit'] if 'value_unit' in h.keys() else None,
+            'value_aggregation_type': h['value_aggregation_type'] if 'value_aggregation_type' in h.keys() else 'absolute',
+            'categories': h['categories'] if 'categories' in h.keys() else None,
             'created_at': h['created_at']
         }
         for h in habits
@@ -199,6 +205,7 @@ def create_new_habit():
     tracks_value = data.get('tracks_value', False)
     value_unit = data.get('value_unit')
     value_aggregation_type = data.get('value_aggregation_type', 'absolute')
+    categories = data.get('categories')
 
     # Validate value_unit if provided
     if value_unit and len(value_unit) > 50:
@@ -208,13 +215,18 @@ def create_new_habit():
     if value_aggregation_type not in ['absolute', 'cumulative']:
         return jsonify({'error': 'Value aggregation type must be "absolute" or "cumulative"'}), 400
 
+    # Validate categories if provided
+    if categories and len(categories) > 500:
+        return jsonify({'error': 'Categories must be 500 characters or less'}), 400
+
     # Create habit
     habit_id = create_habit(
         name,
         is_public=is_public,
         tracks_value=tracks_value,
         value_unit=value_unit,
-        value_aggregation_type=value_aggregation_type
+        value_aggregation_type=value_aggregation_type,
+        categories=categories
     )
 
     # Invalidate dashboard cache
@@ -285,6 +297,13 @@ def update_existing_habit(habit_id):
         if value_aggregation_type not in ['absolute', 'cumulative']:
             return jsonify({'error': 'Value aggregation type must be "absolute" or "cumulative"'}), 400
         updates['value_aggregation_type'] = value_aggregation_type
+
+    if 'categories' in data:
+        categories = data['categories']
+        # Allow None/null to clear the categories
+        if categories is not None and len(categories) > 500:
+            return jsonify({'error': 'Categories must be 500 characters or less'}), 400
+        updates['categories'] = categories
 
     # Update habit
     update_habit(habit_id, **updates)
